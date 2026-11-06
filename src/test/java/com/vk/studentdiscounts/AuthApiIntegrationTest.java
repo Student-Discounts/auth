@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -122,13 +123,81 @@ class AuthApiIntegrationTest {
     }
 
     @Test
-    void blockedUserCannotLogin() throws Exception {
+    void refreshRotatesTokenAndReuseOfOldTokenRevokesSession() throws Exception {
         registerUser(ANNA);
+        Tokens first = loginUser(ANNA);
+
+        Tokens second = Tokens.from(refresh(first.refresh()).andExpect(status().isOk()));
+        assertThat(second.refresh()).isNotEqualTo(first.refresh());
+
+        refresh(first.refresh())
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("invalid_refresh_token"));
+        // Сессия отозвана целиком: не работает и токен, полученный при последней ротации.
+        refresh(second.refresh()).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutEndsCurrentSession() throws Exception {
+        registerUser(ANNA);
+        Tokens tokens = loginUser(ANNA);
+
+        mvc.perform(post("/api/v1/auth/logout").header(AUTHORIZATION, bearer(tokens)))
+                .andExpect(status().isNoContent());
+
+        refresh(tokens.refresh()).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void userCanListAndEndOwnSessions() throws Exception {
+        registerUser(ANNA);
+        Tokens laptop = loginUser(ANNA);
+        Tokens phone = loginUser(ANNA);
+
+        mvc.perform(get("/api/v1/me/sessions").header(AUTHORIZATION, bearer(laptop)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[?(@.current == true)].id", contains(sessionId(laptop))));
+
+        mvc.perform(delete("/api/v1/me/sessions/{id}", sessionId(phone)).header(AUTHORIZATION, bearer(laptop)))
+                .andExpect(status().isNoContent());
+        refresh(phone.refresh()).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/me/sessions").header(AUTHORIZATION, bearer(laptop)))
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        mvc.perform(delete("/api/v1/me/sessions").header(AUTHORIZATION, bearer(laptop)))
+                .andExpect(status().isNoContent());
+        refresh(laptop.refresh()).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void userCannotEndSomeoneElsesSession() throws Exception {
+        registerUser(ANNA);
+        registerUser(BORIS);
+        Tokens anna = loginUser(ANNA);
+        Tokens boris = loginUser(BORIS);
+
+        mvc.perform(delete("/api/v1/me/sessions/{id}", sessionId(anna)).header(AUTHORIZATION, bearer(boris)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("session_not_found"));
+
+        refresh(anna.refresh()).andExpect(status().isOk());
+    }
+
+    @Test
+    void blockedUserCannotLoginAndLosesExistingSessions() throws Exception {
+        registerUser(ANNA);
+        Tokens tokens = loginUser(ANNA);
         jdbc.update("update users set status = 'BLOCKED' where email = ?", ANNA);
 
         login(ANNA, PASSWORD)
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("account_blocked"));
+        refresh(tokens.refresh()).andExpect(status().isForbidden());
+
+        // Отзыв сессии сохранился, несмотря на ошибку в ответе: после разблокировки нужен новый вход.
+        jdbc.update("update users set status = 'ACTIVE' where email = ?", ANNA);
+        refresh(tokens.refresh()).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -162,6 +231,16 @@ class AuthApiIntegrationTest {
 
     private Tokens loginUser(String email) throws Exception {
         return Tokens.from(login(email, PASSWORD).andExpect(status().isOk()));
+    }
+
+    private ResultActions refresh(String refreshToken) throws Exception {
+        return mvc.perform(post("/api/v1/auth/refresh").contentType(APPLICATION_JSON).content("""
+                {"refreshToken": "%s"}
+                """.formatted(refreshToken)));
+    }
+
+    private String sessionId(Tokens tokens) {
+        return jwtDecoder.decode(tokens.access()).getClaimAsString("sid");
     }
 
     private static String bearer(Tokens tokens) {

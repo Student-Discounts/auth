@@ -11,6 +11,8 @@ public enum ErrorCode {
     EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT, "Пользователь с таким email уже зарегистрирован"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Неверный email или пароль"),
     ACCOUNT_BLOCKED(HttpStatus.FORBIDDEN, "Аккаунт заблокирован"),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "Refresh-токен недействителен или истёк"),
+    SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Сессия не найдена"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "Пользователь не найден");
 
     private final HttpStatus status;

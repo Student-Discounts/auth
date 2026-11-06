@@ -66,6 +66,26 @@ public class UserSession {
         return session;
     }
 
+    boolean isActive(Instant now) {
+        return revokedAt == null && now.isBefore(expiresAt);
+    }
+
+    /**
+     * Заменяет refresh-токен новым. Хеш старого сохраняется, чтобы распознать его повторное предъявление.
+     */
+    void rotate(String newRefreshTokenHash, Instant now) {
+        previousRefreshTokenHash = refreshTokenHash;
+        refreshTokenHash = newRefreshTokenHash;
+        lastUsedAt = now;
+    }
+
+    void revoke(SessionRevokeReason reason, Instant now) {
+        if (revokedAt == null) {
+            revokedAt = now;
+            revokeReason = reason;
+        }
+    }
+
     public UUID getId() {
         return id;
     }
