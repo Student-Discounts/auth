@@ -15,7 +15,8 @@ import java.util.List;
 @ConfigurationProperties("sd.auth")
 public record AuthProperties(@Valid @NotNull Jwt jwt,
                              @DefaultValue Session session,
-                             @DefaultValue Cors cors) {
+                             @DefaultValue Cors cors,
+                             @DefaultValue Bootstrap bootstrap) {
 
     /**
      * @param issuer         значение claim {@code iss}; сервисы-потребители сверяют его
@@ -38,5 +39,12 @@ public record AuthProperties(@Valid @NotNull Jwt jwt,
     }
 
     public record Cors(@DefaultValue List<String> allowedOrigins) {
+    }
+
+    /**
+     * @param seniorModerators email уже зарегистрированных пользователей, которым при запуске назначается
+     *                         роль {@code SENIOR_MODERATOR}; через API эту роль выдать нельзя
+     */
+    public record Bootstrap(@DefaultValue List<String> seniorModerators) {
     }
 }
