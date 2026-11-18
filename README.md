@@ -18,6 +18,8 @@ docker compose up -d        # PostgreSQL на localhost:5432 (можно взя�
 
 Схему БД создаёт Flyway из `src/main/resources/db/migration`. Hibernate схему не меняет, а только сверяет её с сущностями.
 
+Swagger UI: http://localhost:8080/swagger-ui.html, спецификация OpenAPI: http://localhost:8080/v3/api-docs. В продакшене их отключает `SD_AUTH_API_DOCS_ENABLED=false`. Пошаговые сценарии ручной проверки всех функций — в [MANUAL_TESTING.md](MANUAL_TESTING.md).
+
 ## API
 
 | Метод и путь | Доступ | Назначение |
@@ -112,6 +114,7 @@ spring.security.oauth2.resourceserver.jwt.authority-prefix=ROLE_
 | `SD_AUTH_DB_USER` / `SD_AUTH_DB_PASSWORD` | `sd_auth_user` / `admin` | Учётные данные БД |
 | `SD_AUTH_ISSUER` | `http://localhost:8080` | Значение `iss` в токенах |
 | `SD_AUTH_CORS_ORIGINS` | `http://localhost:5173` | Адреса фронтенда через запятую |
+| `SD_AUTH_API_DOCS_ENABLED` | `true` | Swagger UI и `/v3/api-docs` |
 | `SD_AUTH_SENIOR_MODERATORS` | не задано | Email зарегистрированных пользователей через запятую, которым при запуске назначается `SENIOR_MODERATOR` |
 | `SD_AUTH_JWT_PRIVATEKEY` / `SD_AUTH_JWT_PUBLICKEY` | не заданы | PEM-файлы ключа подписи, например `file:/run/secrets/jwt-private.pem` |
 

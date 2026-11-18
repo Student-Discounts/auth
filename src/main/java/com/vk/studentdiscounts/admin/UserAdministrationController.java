@@ -2,6 +2,8 @@ package com.vk.studentdiscounts.admin;
 
 import com.vk.studentdiscounts.token.TokenClaims;
 import com.vk.studentdiscounts.user.Role;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +29,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/users")
+@Tag(name = "Администрирование пользователей", description = "Только для старшего модератора")
 public class UserAdministrationController {
 
     private static final int MAX_EVENTS = 200;
@@ -38,18 +41,21 @@ public class UserAdministrationController {
     }
 
     @GetMapping
+    @Operation(summary = "Найти пользователя по email")
     @PreAuthorize("hasAuthority('USER_READ_ANY')")
     public UserAdminResponse findByEmail(@RequestParam String email) {
         return administration.findByEmail(email);
     }
 
     @GetMapping("/{userId}")
+    @Operation(summary = "Пользователь со статусом и причиной блокировки")
     @PreAuthorize("hasAuthority('USER_READ_ANY')")
     public UserAdminResponse find(@PathVariable UUID userId) {
         return administration.find(userId);
     }
 
     @PutMapping("/{userId}/roles/{role}")
+    @Operation(summary = "Назначить роль; через API доступна только MODERATOR")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('ROLE_MODERATOR_MANAGE')")
     public void grantRole(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId, @PathVariable Role role) {
@@ -57,6 +63,7 @@ public class UserAdministrationController {
     }
 
     @DeleteMapping("/{userId}/roles/{role}")
+    @Operation(summary = "Снять роль; через API доступна только MODERATOR")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('ROLE_MODERATOR_MANAGE')")
     public void revokeRole(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId, @PathVariable Role role) {
@@ -64,6 +71,7 @@ public class UserAdministrationController {
     }
 
     @PostMapping("/{userId}/block")
+    @Operation(summary = "Заблокировать с причиной; все сессии пользователя завершаются")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('ACCOUNT_BLOCK')")
     public void block(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId,
@@ -72,6 +80,7 @@ public class UserAdministrationController {
     }
 
     @PostMapping("/{userId}/unblock")
+    @Operation(summary = "Разблокировать")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('ACCOUNT_BLOCK')")
     public void unblock(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId) {
@@ -79,6 +88,7 @@ public class UserAdministrationController {
     }
 
     @DeleteMapping("/{userId}/sessions")
+    @Operation(summary = "Завершить все сессии пользователя")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('SESSION_REVOKE_ANY')")
     public void revokeSessions(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId) {
@@ -89,6 +99,7 @@ public class UserAdministrationController {
      * История ролей, блокировок и отзыва сессий, новые события первыми.
      */
     @GetMapping("/{userId}/identity-events")
+    @Operation(summary = "История ролей, блокировок и отзыва сессий, новые первыми")
     @PreAuthorize("hasAuthority('IDENTITY_AUDIT_READ')")
     public List<IdentityEventResponse> events(@PathVariable UUID userId,
                                               @RequestParam(defaultValue = "50") int limit) {

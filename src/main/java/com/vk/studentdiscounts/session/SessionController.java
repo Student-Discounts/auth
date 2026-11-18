@@ -1,6 +1,8 @@
 package com.vk.studentdiscounts.session;
 
 import com.vk.studentdiscounts.token.TokenClaims;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,6 +22,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/me/sessions")
+@Tag(name = "Свои сессии")
 public class SessionController {
 
     private final SessionService sessionService;
@@ -29,17 +32,20 @@ public class SessionController {
     }
 
     @GetMapping
+    @Operation(summary = "Активные сессии; текущая помечена current: true")
     public List<SessionResponse> list(@AuthenticationPrincipal Jwt jwt) {
         return sessionService.listActive(TokenClaims.userId(jwt), TokenClaims.sessionId(jwt));
     }
 
     @DeleteMapping("/{sessionId}")
+    @Operation(summary = "Завершить одну свою сессию")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revoke(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
         sessionService.revoke(TokenClaims.userId(jwt), sessionId, SessionRevokeReason.USER_REVOKED);
     }
 
     @DeleteMapping
+    @Operation(summary = "Завершить все свои сессии, включая текущую")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revokeAll(@AuthenticationPrincipal Jwt jwt) {
         sessionService.revokeAll(TokenClaims.userId(jwt));
