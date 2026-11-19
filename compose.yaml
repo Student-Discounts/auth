@@ -1,0 +1,17 @@
+# Локальная БД для sd-auth. Если порт 5432 занят своим PostgreSQL:
+#   SD_AUTH_DB_PORT=5433 docker compose up -d
+#   SD_AUTH_DB_URL=jdbc:postgresql://localhost:5433/sd-auth ./mvnw spring-boot:run
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: sd-auth
+      POSTGRES_USER: sd_auth_user
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "${SD_AUTH_DB_PORT:-5432}:5432"
+    volumes:
+      - sd-auth-data:/var/lib/postgresql/data
+
+volumes:
+  sd-auth-data:
