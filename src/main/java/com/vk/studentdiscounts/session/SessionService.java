@@ -99,7 +99,15 @@ public class SessionService {
 
     @Transactional
     public void revokeAll(UUID userId) {
-        sessions.revokeAll(userId, SessionRevokeReason.ALL_SESSIONS_REVOKED, clock.instant());
+        revokeAll(userId, SessionRevokeReason.ALL_SESSIONS_REVOKED);
+    }
+
+    /**
+     * @return сколько активных сессий было завершено
+     */
+    @Transactional
+    public int revokeAll(UUID userId, SessionRevokeReason reason) {
+        return sessions.revokeAll(userId, reason, clock.instant());
     }
 
     private TokenResponse issueTokens(User user, UserSession session, String refreshToken, Instant now) {

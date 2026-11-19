@@ -3,6 +3,8 @@ package com.vk.studentdiscounts.user;
 import com.vk.studentdiscounts.error.ApiException;
 import com.vk.studentdiscounts.error.ErrorCode;
 import com.vk.studentdiscounts.token.TokenClaims;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/me")
+@Tag(name = "Профиль")
 public class MeController {
 
     private final UserRepository users;
@@ -20,6 +23,7 @@ public class MeController {
     }
 
     @GetMapping
+    @Operation(summary = "Свой профиль и роли")
     public UserResponse me(@AuthenticationPrincipal Jwt jwt) {
         return users.findById(TokenClaims.userId(jwt))
                 .map(UserResponse::from)

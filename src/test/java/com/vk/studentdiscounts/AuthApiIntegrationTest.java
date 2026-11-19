@@ -1,20 +1,9 @@
 package com.vk.studentdiscounts;
 
-import com.jayway.jsonpath.JsonPath;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,28 +17,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
-class AuthApiIntegrationTest {
+class AuthApiIntegrationTest extends ApiIntegrationTest {
 
     private static final String ANNA = "anna@example.com";
     private static final String BORIS = "boris@example.com";
-    private static final String PASSWORD = "correct-horse-battery";
-
-    @Autowired
-    private MockMvc mvc;
-
-    @Autowired
-    private JwtDecoder jwtDecoder;
-
-    @Autowired
-    private JdbcTemplate jdbc;
-
-    @BeforeEach
-    void cleanDatabase() {
-        jdbc.execute("truncate table users cascade");
-    }
 
     @Test
     void registerCreatesStudentAndStoresOnlyPasswordHash() throws Exception {
@@ -113,7 +84,9 @@ class AuthApiIntegrationTest {
 
     @Test
     void protectedEndpointRequiresValidAccessToken() throws Exception {
-        mvc.perform(get("/api/v1/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("unauthorized"));
         mvc.perform(get("/api/v1/me").header(AUTHORIZATION, "Bearer not-a-jwt")).andExpect(status().isUnauthorized());
 
         registerUser(ANNA);
@@ -211,51 +184,5 @@ class AuthApiIntegrationTest {
                 .andExpect(jsonPath("$.keys[0].kty").value("RSA"))
                 .andExpect(jsonPath("$.keys[0].kid").value(jwt.getHeaders().get("kid")))
                 .andExpect(jsonPath("$.keys[0].d").doesNotExist());
-    }
-
-    private ResultActions register(String email, String password) throws Exception {
-        return mvc.perform(post("/api/v1/auth/register").contentType(APPLICATION_JSON).content("""
-                {"email": "%s", "password": "%s", "displayName": "Тестовый пользователь"}
-                """.formatted(email, password)));
-    }
-
-    private String registerUser(String email) throws Exception {
-        return JsonPath.read(body(register(email, PASSWORD).andExpect(status().isCreated())), "$.id");
-    }
-
-    private ResultActions login(String email, String password) throws Exception {
-        return mvc.perform(post("/api/v1/auth/login").contentType(APPLICATION_JSON).content("""
-                {"email": "%s", "password": "%s"}
-                """.formatted(email, password)));
-    }
-
-    private Tokens loginUser(String email) throws Exception {
-        return Tokens.from(login(email, PASSWORD).andExpect(status().isOk()));
-    }
-
-    private ResultActions refresh(String refreshToken) throws Exception {
-        return mvc.perform(post("/api/v1/auth/refresh").contentType(APPLICATION_JSON).content("""
-                {"refreshToken": "%s"}
-                """.formatted(refreshToken)));
-    }
-
-    private String sessionId(Tokens tokens) {
-        return jwtDecoder.decode(tokens.access()).getClaimAsString("sid");
-    }
-
-    private static String bearer(Tokens tokens) {
-        return "Bearer " + tokens.access();
-    }
-
-    private static String body(ResultActions result) throws Exception {
-        return result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-    }
-
-    private record Tokens(String access, String refresh) {
-
-        static Tokens from(ResultActions result) throws Exception {
-            String json = body(result);
-            return new Tokens(JsonPath.read(json, "$.accessToken"), JsonPath.read(json, "$.refreshToken"));
-        }
     }
 }

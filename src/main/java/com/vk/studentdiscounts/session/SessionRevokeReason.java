@@ -10,5 +10,7 @@ public enum SessionRevokeReason {
     /** Уже использованный refresh-токен предъявлен повторно: вероятна кража токена. */
     REFRESH_TOKEN_REUSE,
     /** Аккаунт заблокирован. */
-    ACCOUNT_BLOCKED
+    ACCOUNT_BLOCKED,
+    /** Старший модератор завершил все сессии пользователя. */
+    REVOKED_BY_ADMIN
 }
