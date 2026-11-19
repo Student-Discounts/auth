@@ -50,6 +50,15 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "blocked_at")
+    private Instant blockedAt;
+
+    @Column(name = "blocked_reason", length = 500)
+    private String blockedReason;
+
+    @Column(name = "blocked_by")
+    private UUID blockedBy;
+
     protected User() {
     }
 
@@ -73,6 +82,34 @@ public class User {
 
     public boolean isBlocked() {
         return status == UserStatus.BLOCKED;
+    }
+
+    /**
+     * @return {@code false}, если роль уже была
+     */
+    public boolean grantRole(Role role) {
+        return roles.add(role);
+    }
+
+    /**
+     * @return {@code false}, если роли не было
+     */
+    public boolean revokeRole(Role role) {
+        return roles.remove(role);
+    }
+
+    public void block(UUID actorId, String reason, Instant now) {
+        status = UserStatus.BLOCKED;
+        blockedAt = now;
+        blockedReason = reason;
+        blockedBy = actorId;
+    }
+
+    public void unblock() {
+        status = UserStatus.ACTIVE;
+        blockedAt = null;
+        blockedReason = null;
+        blockedBy = null;
     }
 
     public UUID getId() {
@@ -101,5 +138,17 @@ public class User {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getBlockedAt() {
+        return blockedAt;
+    }
+
+    public String getBlockedReason() {
+        return blockedReason;
+    }
+
+    public UUID getBlockedBy() {
+        return blockedBy;
     }
 }
