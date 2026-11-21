@@ -16,6 +16,8 @@ docker compose up -d        # PostgreSQL на localhost:5432 (можно взя�
 ./mvnw test                 # интеграционные тесты; PostgreSQL поднимается в Docker через Testcontainers
 ```
 
+CI (`.github/workflows/ci.yml`) запускает `./mvnw verify` со всеми тестами на каждый PR и на каждый push в `main` и `dev`. При падении отчёты тестов сохраняются в артефакт `test-reports`.
+
 Схему БД создаёт Flyway из `src/main/resources/db/migration`. Hibernate схему не меняет, а только сверяет её с сущностями.
 
 Swagger UI: http://localhost:8080/swagger-ui.html, спецификация OpenAPI: http://localhost:8080/v3/api-docs. В продакшене их отключает `SD_AUTH_API_DOCS_ENABLED=false`. Пошаговые сценарии ручной проверки всех функций — в [MANUAL_TESTING.md](MANUAL_TESTING.md).
